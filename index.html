@@ -1,0 +1,2409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pharmacology Course</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+        .medical-gradient {
+            background: linear-gradient(135deg, #0d9488 0%, #115e59 100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans text-gray-800">
+
+    <div x-data="pharmacologyApp()" x-init="initApp()" class="container mx-auto px-4 py-8 max-w-6xl">
+        
+        <!-- Header -->
+        <header class="mb-8 text-center">
+            <h1 class="text-4xl font-bold text-teal-800 mb-2">Pharmacology Course</h1>
+            <p class="text-gray-600">Interactive Drug Index & Self-Assessment</p>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <div class="flex justify-center mb-8">
+            <div class="bg-white p-1 rounded-lg shadow-sm border border-gray-200 inline-flex">
+                <button 
+                    @click="activeTab = 'drugs'"
+                    :class="{'bg-teal-600 text-white shadow-md': activeTab === 'drugs', 'text-gray-600 hover:bg-gray-100': activeTab !== 'drugs'}"
+                    class="px-6 py-2 rounded-md transition-all duration-200 font-medium text-sm sm:text-base focus:outline-none">
+                    Drug Index
+                </button>
+                <button 
+                    @click="activeTab = 'questions'"
+                    :class="{'bg-teal-600 text-white shadow-md': activeTab === 'questions', 'text-gray-600 hover:bg-gray-100': activeTab !== 'questions'}"
+                    class="px-6 py-2 rounded-md transition-all duration-200 font-medium text-sm sm:text-base focus:outline-none ml-1">
+                    Self-Assessment
+                </button>
+            </div>
+        </div>
+
+        <!-- Drug Index View -->
+        <div x-show="activeTab === 'drugs'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 transform scale-95" x-transition:enter-end="opacity-100 transform scale-100">
+            
+            <!-- Search Bar -->
+            <div class="mb-8 max-w-2xl mx-auto relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
+                <input 
+                    x-model="searchQuery" 
+                    type="text" 
+                    placeholder="Search drugs by name or description..." 
+                    class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 sm:text-sm shadow-sm transition duration-150 ease-in-out"
+                >
+            </div>
+
+            <!-- Drugs Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <template x-for="drug in filteredDrugs" :key="drug.id">
+                    <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border flex flex-col h-full"
+                         :class="drug.names.length > 1 ? 'border-teal-200 ring-1 ring-teal-50' : 'border-gray-100'">
+                        
+                        <div class="p-5 flex-grow">
+                            <div class="flex justify-between items-start mb-4">
+                                <span class="flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold border transition-colors"
+                                      :class="drug.names.length > 1 ? 'bg-teal-100 text-teal-800 border-teal-200' : 'bg-gray-50 text-gray-600 border-gray-200'" 
+                                      x-text="drug.id"></span>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                      :class="drug.names.length > 1 ? 'bg-teal-100 text-teal-800' : 'bg-gray-100 text-gray-600'">
+                                    Pg <span x-text="drug.page"></span>
+                                </span>
+                            </div>
+
+                            <!-- Single Drug Layout -->
+                            <template x-if="drug.names.length === 1">
+                                <div>
+                                    <h3 class="text-xl font-bold text-gray-900 mb-2" x-text="drug.names[0].name"></h3>
+                                    <p class="text-gray-600 text-sm leading-relaxed">
+                                        <span x-text="drug.description"></span>
+                                        <span x-show="drug.names[0].note" x-text="' ' + drug.names[0].note" class="text-gray-500"></span>
+                                    </p>
+                                </div>
+                            </template>
+
+                            <!-- Grouped Drugs Layout -->
+                            <template x-if="drug.names.length > 1">
+                                <div>
+                                    <div class="mb-3">
+                                        <span class="text-[10px] font-bold tracking-wider uppercase mb-1 block"
+                                              :class="getCategoryStyle(drug.description).color">Common Indication / Class</span>
+                                        <div class="flex items-start gap-2">
+                                            <div class="flex-shrink-0 mt-1" :class="getCategoryStyle(drug.description).color" x-html="getCategoryStyle(drug.description).icon"></div>
+                                            <h3 class="text-lg font-bold leading-snug" 
+                                                :class="getCategoryStyle(drug.description).color"
+                                                x-text="drug.description"></h3>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="rounded-lg border overflow-hidden"
+                                         :class="[getCategoryStyle(drug.description).bg, getCategoryStyle(drug.description).border]">
+                                        <ul class="divide-y" :class="getCategoryStyle(drug.description).border">
+                                            <template x-for="item in drug.names">
+                                                <li class="px-3 py-2 text-sm flex flex-col transition-colors hover:bg-white/50"
+                                                    :class="getCategoryStyle(drug.description).color">
+                                                    <div class="flex items-center font-bold">
+                                                        <svg class="w-3.5 h-3.5 mr-2 flex-shrink-0 opacity-75" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                                        </svg>
+                                                        <span x-text="item.name"></span>
+                                                    </div>
+                                                    <span x-show="item.note" x-text="item.note" class="text-xs pl-5 mt-0.5 font-normal opacity-80"></span>
+                                                </li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+
+                        <div class="px-5 py-3 border-t flex justify-between items-center gap-2"
+                             :class="drug.names.length > 1 ? 'bg-teal-50/30 border-teal-100' : 'bg-gray-50 border-gray-100'">
+                            <p class="text-xs text-gray-500 truncate" x-text="drug.lecture"></p>
+                            <button @click="openPdf(drug.page)" 
+                               class="flex-shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-teal-700 bg-white border border-teal-200 hover:bg-teal-50 hover:border-teal-300 transition-all duration-200 shadow-sm group cursor-pointer">
+                                <svg class="w-3.5 h-3.5 text-teal-500 group-hover:text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                                PDF
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+            
+            <!-- No Results State -->
+            <div x-show="filteredDrugs.length === 0" class="text-center py-12">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-gray-900">No drugs found</h3>
+                <p class="mt-1 text-sm text-gray-500">Try adjusting your search terms.</p>
+            </div>
+        </div>
+
+        <!-- Self-Assessment View -->
+        <div x-show="activeTab === 'questions'" x-cloak x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 transform scale-95" x-transition:enter-end="opacity-100 transform scale-100">
+            <div class="space-y-8">
+                <template x-for="(lectureGroup, index) in questionsData" :key="index">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <div class="bg-teal-50 px-6 py-4 border-b border-teal-100">
+                            <h2 class="text-lg font-semibold text-teal-900" x-text="lectureGroup.lecture"></h2>
+                        </div>
+                        <div class="divide-y divide-gray-100">
+                            <template x-for="q in lectureGroup.questions" :key="q.id">
+                                <div class="p-6 hover:bg-gray-50 transition-colors duration-150">
+                                    <div class="flex justify-between items-start gap-4">
+                                        <div class="flex-grow">
+                                            <div class="flex items-center gap-2 mb-2">
+                                                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Question <span x-text="q.id"></span></span>
+                                                <span class="text-xs text-gray-300">|</span>
+                                                <span class="text-xs text-gray-400">Pg <span x-text="q.page"></span></span>
+                                            </div>
+                                            <h3 class="text-lg font-medium text-gray-900 mb-4" x-text="q.question"></h3>
+                                            
+                                            <!-- Answer Section -->
+                                            <div x-show="isAnswerVisible(q.id)" 
+                                                 x-transition:enter="transition ease-out duration-200"
+                                                 x-transition:enter-start="opacity-0 -translate-y-2"
+                                                 x-transition:enter-end="opacity-100 translate-y-0"
+                                                 class="bg-teal-50 rounded-lg p-4 border border-teal-100 mt-4">
+                                                <p class="text-teal-900 whitespace-pre-wrap" x-text="q.answer"></p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="flex flex-col gap-2 flex-shrink-0">
+                                            <button 
+                                                @click="toggleAnswer(q.id)"
+                                                class="inline-flex items-center justify-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-teal-700 bg-teal-100 hover:bg-teal-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-colors duration-200 w-24"
+                                            >
+                                                <span x-text="isAnswerVisible(q.id) ? 'Hide' : 'Answer'"></span>
+                                            </button>
+                                            <button 
+                                                @click="openPdf(q.page)"
+                                                class="inline-flex items-center justify-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-colors duration-200 w-24"
+                                            >
+                                                View PDF
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- PDF Modal Overlay -->
+        <div x-show="pdfModal.isOpen" 
+             x-cloak
+             class="fixed inset-0 z-50 overflow-hidden flex items-center justify-center bg-black bg-opacity-75 backdrop-blur-sm"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0">
+            
+            <div class="relative w-full h-full max-w-6xl max-h-[90vh] mx-4 bg-white rounded-lg shadow-2xl flex flex-col"
+                 @click.away="closePdf()">
+                
+                <!-- Modal Header -->
+                <div class="flex justify-between items-center px-4 py-3 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+                    <h3 class="text-lg font-medium text-gray-900">Pharmacology Reference</h3>
+                    <button @click="closePdf()" class="text-gray-400 hover:text-gray-500 focus:outline-none">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Modal Body (Iframe) -->
+                <div class="flex-grow bg-gray-100 relative">
+                    <iframe :src="pdfModal.url" class="absolute inset-0 w-full h-full" frameborder="0"></iframe>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function pharmacologyApp() {
+            return {
+                activeTab: 'drugs',
+                searchQuery: '',
+                drugsData: [
+  {
+    "lecture": "Lecture 1: Basic Principles",
+    "drugs": [
+      {
+        "name": "Digoxin",
+        "page": 8,
+        "description": "Natural drug source derived from the plant Digitalis purpurea."
+      },
+      {
+        "name": "Penicillin",
+        "page": 8,
+        "description": "Natural drug source derived from a microorganism (fungus)."
+      },
+      {
+        "name": "Sulphonamide",
+        "page": 9,
+        "description": "Synthetic drug produced chemically."
+      },
+      {
+        "name": "Human insulin",
+        "page": 9,
+        "description": "Synthetic drug produced via genetic engineering (rDNA technology)."
+      },
+      {
+        "name": "Paracetamol",
+        "page": 9,
+        "description": "Example of an Over The Counter (OTC) drug shown on a GMP-WHO box."
+      },
+      {
+        "name": "Panadol",
+        "page": 10,
+        "description": "Proprietary/Commercial name for Paracetamol."
+      },
+      {
+        "name": "Activated charcoal",
+        "page": 11,
+        "description": "Antidote used to overcome toxicities and/or overdose of oral drugs."
+      },
+      {
+        "name": "Omeprazole",
+        "page": 12,
+        "description": "Enteric-coated preparation; Acid-unstable drug protected from stomach acid."
+      },
+      {
+        "name": "Aspirin",
+        "page": 12,
+        "description": "Enteric-coated preparation; Irritating drug formulated to protect the stomach."
+      },
+      {
+        "name": "Morphine",
+        "page": 13,
+        "description": "Oral morphine has a short half-life (2-4 hours); Extended-release tablets allow dosing twice daily instead of six times."
+      },
+      {
+        "name": "Nitroglycerin",
+        "page": 14,
+        "description": "Administered sublingual/buccal for acute anginal attacks; rapid absorption and avoidance of first-pass metabolism."
+      },
+
+      {
+        "name": "Insulin",
+        "page": 17,
+        "description": "Image shows Regular Human Insulin injection."
+      },
+      {
+        "name": "Chemotherapy drugs",
+        "page": 18,
+        "description": "Administered via Intra-peritoneal injection (e.g., ovarian cancer) or Intrathecal injection."
+      },
+      {
+        "name": "Salbutamol",
+        "page": 19,
+        "description": "Bronchodilator administered via inhalation."
+      },
+      {
+        "name": "Fluticasone",
+        "page": 19,
+        "description": "Corticosteroid administered via inhalation."
+      },
+      {
+        "name": "Clotrimazole",
+        "page": 19,
+        "description": "Topical cream applied directly to the skin for fungal infections."
+      },
+      {
+        "name": "Clenil",
+        "page": 19,
+        "description": "Inhalation solution (beclomethasone dipropionate 250 mcg)."
+      },
+      {
+        "name": "Statins",
+        "page": 21,
+        "description": "Used for prophylaxis to prevent cardiovascular disease."
+      },
+      {
+        "name": "Antibiotics",
+        "page": 21,
+        "description": "Pharmacotherapy used to treat bacterial infections."
+      },
+      {
+        "name": "Antidepressants",
+        "page": 21,
+        "description": "Pharmacotherapy used to treat depression."
+      },
+      {
+        "name": "Blood thinners",
+        "page": 22,
+        "description": "Used as prophylaxis to prevent heart attacks or strokes."
+      },
+      {
+        "name": "Acetaminophen",
+        "page": 22,
+        "description": "Used for symptomatic relief (pain reliever)."
+      },
+      {
+        "name": "Antihistamines",
+        "page": 22,
+        "description": "Used for symptomatic relief of allergy symptoms."
+      },
+      {
+        "name": "Antivirals",
+        "page": 22,
+        "description": "Used to treat viral infections."
+      },
+      {
+        "name": "Glucose",
+        "page": 24,
+        "description": "Large molecule that uses Facilitated diffusion (requires carrier protein, no energy)."
+      },
+      {
+        "name": "Vitamin B12",
+        "page": 26,
+        "description": "Transported across the gut wall by Endocytosis (exceptionally large size)."
+      },
+      {
+        "name": "Norepinephrine",
+        "page": 26,
+        "description": "Neurotransmitter stored in intracellular vesicles and released by Exocytosis."
+      },
+      {
+        "name": "Nitroglycerin",
+        "page": 27,
+        "description": "Sublingual pellets for acute angina; absorbs better/faster than oral as it bypasses the liver."
+      },
+      {
+        "name": "Atropine",
+        "page": 29,
+        "description": "Muscarinic receptor blocker; reduces motility which can slow drug absorption."
+      },
+      {
+        "name": "Metoclopramide",
+        "page": 29,
+        "description": "Increases gastric motility."
+      },
+      {
+        "name": "Primperan",
+        "page": 29,
+        "description": "Image shows Metoclopramide 10mg tablets."
+      },
+      {
+        "name": "Tetracycline",
+        "page": 29,
+        "description": "Binds strongly to Ca2+; absorption is prevented by calcium-rich foods like milk."
+      }
+    ]
+  },
+  {
+    "lecture": "Lecture 2: Pharmacokinetics & Pharmacodynamics",
+    "drugs": [
+      {
+        "name": "Albumin",
+        "page": 34,
+        "description": "Major drug-binding plasma protein acting as a drug reservoir."
+      },
+      {
+        "name": "Chloramphenicol",
+        "page": 39,
+        "description": "Causes 'Grey baby syndrome' in newborns due to deficiency of liver microsomal enzymes."
+      },
+      {
+        "name": "Carbamazepine",
+        "page": 40,
+        "description": "Hepatic microsomal enzyme (HME) inducer."
+      },
+      {
+        "name": "Phenobarbital",
+        "page": 40,
+        "description": "Hepatic microsomal enzyme (HME) inducer."
+      },
+      {
+        "name": "Rifampicin",
+        "page": 40,
+        "description": "Hepatic microsomal enzyme (HME) inducer; also noted to be excreted in sweat glands (Page 43)."
+      },
+      {
+        "name": "Cimetidine",
+        "page": 40,
+        "description": "Hepatic microsomal enzyme (HME) inhibitor."
+      },
+      {
+        "name": "Omeprazole",
+        "page": 40,
+        "description": "Hepatic microsomal enzyme (HME) inhibitor."
+      },
+      {
+        "name": "Erythromycin",
+        "page": 40,
+        "description": "Hepatic microsomal enzyme (HME) inhibitor."
+      },
+      {
+        "name": "Ketoconazole",
+        "page": 40,
+        "description": "Hepatic microsomal enzyme (HME) inhibitor."
+      },
+      {
+        "name": "Penicillin",
+        "page": 41,
+        "description": "Renal excretion; cleared from blood almost completely on a single transit (Active tubular secretion)."
+      },
+      {
+        "name": "Diazepam",
+        "page": 41,
+        "description": "Renal excretion; cleared extremely slowly."
+      },
+      {
+        "name": "Ephedrine",
+        "page": 42,
+        "description": "Basic drug; excretion increased by acidification of urine (using Vitamin C)."
+      },
+      {
+        "name": "Aspirin",
+        "page": 42,
+        "description": "Acidic drug; excretion increased by alkalization of urine (using NaHCO3)."
+      },
+      {
+        "name": "Phenobarbital",
+        "page": 42,
+        "description": "Weak acid; overdose treated with bicarbonate to alkalinize urine and decrease reabsorption."
+      },
+      {
+        "name": "Vitamin C",
+        "page": 42,
+        "description": "Used to acidify urine."
+      },
+      {
+        "name": "NaHCO3 (Bicarbonate)",
+        "page": 42,
+        "description": "Used to alkalinize urine."
+      },
+      {
+        "name": "Iodide",
+        "page": 43,
+        "description": "Excreted in saliva."
+      },
+      {
+        "name": "Morphine",
+        "page": 43,
+        "description": "Excreted in saliva, stomach, and breast milk."
+      },
+      {
+        "name": "Nicotine",
+        "page": 43,
+        "description": "Excreted in breast milk."
+      },
+      {
+        "name": "Nitrous oxide",
+        "page": 43,
+        "description": "Gas excreted by the lungs."
+      },
+      {
+        "name": "Halothane",
+        "page": 43,
+        "description": "Gas excreted by the lungs."
+      },
+      {
+        "name": "Insulin",
+        "page": 48,
+        "description": "Binds to enzyme-linked receptors (tyrosine kinase activity)."
+      },
+      {
+        "name": "Steroid hormones",
+        "page": 48,
+        "description": "Act via intracellular receptors."
+      },
+      {
+        "name": "Phenylephrine",
+        "page": 51,
+        "description": "Full agonist at alpha1-adrenoceptors; mimics norepinephrine response."
+      },
+      {
+        "name": "Norepinephrine",
+        "page": 51,
+        "description": "Endogenous ligand/full agonist."
+      },
+      {
+        "name": "Terazosin",
+        "page": 54,
+        "description": "Antihypertensive; competitive antagonist at alpha1-adrenoceptors."
+      },
+      {
+        "name": "Histamine",
+        "page": 56,
+        "description": "Binds H1 receptors causing bronchoconstriction."
+      },
+      {
+        "name": "Epinephrine",
+        "page": 56,
+        "description": "Functional antagonist to histamine; binds beta2 receptors causing bronchodilation."
+      },
+      {
+        "name": "Pyridostigmine",
+        "page": 59,
+        "description": "(Mestinon, Regonol) Cholinesterase inhibitor used in Myasthenia Gravis to improve nerve-muscle communication."
+      },
+      {
+        "name": "Corticosteroids",
+        "page": 59,
+        "description": "(e.g., Prednisone) Block immune system in Myasthenia Gravis; side effects include bone thinning/diabetes."
+      },
+      {
+        "name": "Azathioprine",
+        "page": 60,
+        "description": "Immunosuppressant for Myasthenia Gravis."
+      },
+      {
+        "name": "Cyclosporine",
+        "page": 60,
+        "description": "Immunosuppressant for Myasthenia Gravis."
+      },
+      {
+        "name": "Methotrexate",
+        "page": 60,
+        "description": "Immunosuppressant for Myasthenia Gravis."
+      },
+      {
+        "name": "Tacrolimus",
+        "page": 60,
+        "description": "Immunosuppressant for Myasthenia Gravis."
+      }
+    ]
+  },
+  {
+    "lecture": "Lecture 3: Dose & Drug Safety",
+    "drugs": [
+      {
+        "name": "Warfarin",
+        "page": 65,
+        "description": "Example of a drug with a small therapeutic index; high doses cause hemorrhage."
+      },
+      {
+        "name": "Penicillin",
+        "page": 65,
+        "description": "Example of a drug with a large therapeutic index; safe even in excess doses."
+      },
+      {
+        "name": "Amoxicillin",
+        "page": 65,
+        "description": "Image shows 500 mg Capsules."
+      },
+      {
+        "name": "Primaquine",
+        "page": 68,
+        "description": "Induces hemolytic anemia in patients with G6PD deficiency (Genetic abnormality)."
+      },
+      {
+        "name": "Chloramphenicol",
+        "page": 68,
+        "description": "Induces hemolytic anemia in patients with G6PD deficiency."
+      },
+      {
+        "name": "Aspirin",
+        "page": 68,
+        "description": "Irritant drug; better taken after meals."
+      },
+      {
+        "name": "Ephedrine",
+        "page": 68,
+        "description": "CNS stimulant; should not be given at night as it causes insomnia."
+      },
+      {
+        "name": "Morphine",
+        "page": 71,
+        "description": "Produces constipation as a side effect when used as an analgesic."
+      },
+      {
+        "name": "Broad-spectrum antibiotics",
+        "page": 71,
+        "description": "Cause secondary effect of superinfection (gut infection by resistant organisms)."
+      },
+      {
+        "name": "Chloramphenicol",
+        "page": 72,
+        "description": "Causes aplastic anemia (Drug idiosyncrasy)."
+      },
+      {
+        "name": "Penicillin",
+        "page": 72,
+        "description": "Causes anaphylactic shock (Hypersensitivity/Allergy)."
+      },
+      {
+        "name": "Salbutamol",
+        "page": 73,
+        "description": "Beta2-agonist; causes acquired tolerance (tachyphylaxis) developing in minutes."
+      },
+      {
+        "name": "Coffee / Smoking",
+        "page": 74,
+        "description": "Examples of Habituation (mild dependence)."
+      },
+      {
+        "name": "Morphine / Heroin",
+        "page": 74,
+        "description": "Examples of Addiction (serious dependence)."
+      },
+      {
+        "name": "Atropine",
+        "page": 75,
+        "description": "Decreases absorption of paracetamol by decreasing gastric emptying rate."
+      },
+      {
+        "name": "Paracetamol",
+        "page": 75,
+        "description": "Absorption decreased by Atropine."
+      },
+      {
+        "name": "Aspirin",
+        "page": 75,
+        "description": "Displaces oral anticoagulants/hypoglycemics from plasma binding sites, increasing their activity."
+      },
+      {
+        "name": "Phenytoin",
+        "page": 75,
+        "description": "Hepatic microsomal enzyme inducer; increases metabolism of other drugs."
+      },
+      {
+        "name": "Cimetidine",
+        "page": 75,
+        "description": "Hepatic microsomal enzyme inhibitor; decreases metabolism of other drugs."
+      },
+      {
+        "name": "Probenecid",
+        "page": 76,
+        "description": "Decreases excretion of penicillin."
+      },
+      {
+        "name": "Acetylcholine",
+        "page": 76,
+        "description": "Combined with Histamine shows Addition effect (1+1=2) on intestine contraction."
+      },
+      {
+        "name": "Histamine",
+        "page": 76,
+        "description": "Combined with Acetylcholine shows Addition effect."
+      },
+      {
+        "name": "Ethanol",
+        "page": 76,
+        "description": "Combined with Barbiturate shows Synergism (1+1=>2) leading to severe CNS depression."
+      },
+      {
+        "name": "Barbiturate",
+        "page": 76,
+        "description": "Combined with Ethanol shows Synergism; Combined with Salicylate shows Potentiation (0+1=1)."
+      },
+      {
+        "name": "Salicylate",
+        "page": 76,
+        "description": "Potentiates the effect of Barbiturate."
+      },
+      {
+        "name": "Paracetamol",
+        "page": 78,
+        "description": "(Panadol, Fevadol, Tylenol) Can induce liver injury at high doses or in combinations for cold/flu."
+      },
+      {
+        "name": "Thalidomide",
+        "page": 79,
+        "description": "Teratogenic; caused limb malformations (Phocomelia) in the late 1950s/60s."
+      },
+      {
+        "name": "Isotretinoin",
+        "page": 79,
+        "description": "(Roaccutane) Acne treatment; contraindicated in pregnancy due to teratogenic effects."
+      },
+      {
+        "name": "Aspirin",
+        "page": 81,
+        "description": "Contraindicated in peptic ulcer."
+      },
+      {
+        "name": "Alcohol",
+        "page": 83,
+        "description": "Affects metabolism; leads to toxicity when taken with prescribed drugs."
+      },
+      {
+        "name": "Aspirin",
+        "page": 86,
+        "description": "Contraindicated in children (risk of Reye\u2019s Syndrome)."
+      },
+      {
+        "name": "Paracetamol",
+        "page": 86,
+        "description": "Safer alternative to Aspirin for children."
+      },
+      {
+        "name": "Ibuprofen",
+        "page": 86,
+        "description": "Safer alternative to Aspirin for children."
+      },
+      {
+        "name": "Insulin",
+        "page": 88,
+        "description": "Mentioned regarding patient education on proper use of injectable medications."
+      }
+    ]
+  },
+  {
+    "lecture": "Lecture 4: Autonomic Nervous System - Cholinergics",
+    "drugs": [
+      {
+        "name": "Acetylcholine",
+        "page": 97,
+        "description": "Chemical neurotransmitter in the autonomic ganglia."
+      },
+      {
+        "name": "Noradrenaline",
+        "page": 98,
+        "description": "Neurotransmitter at sympathetic postganglionic fibers (except sweat/skeletal vessels)."
+      },
+      {
+        "name": "Adrenaline",
+        "page": 98,
+        "description": "Released as hormone from the adrenal medulla."
+      },
+      {
+        "name": "Dopamine",
+        "page": 98,
+        "description": "Chemical mediator in the nervous system."
+      },
+      {
+        "name": "Serotonin",
+        "page": 98,
+        "description": "Chemical mediator in the nervous system."
+      },
+      {
+        "name": "Pilocarpine",
+        "page": 100,
+        "description": "Stimulates cholinergic receptors; muscarinic type."
+      },
+      {
+        "name": "Muscarine",
+        "page": 100,
+        "description": "Stimulates cholinergic receptors; muscarinic type."
+      },
+      {
+        "name": "Nicotine",
+        "page": 100,
+        "description": "Stimulates cholinergic receptors; nicotinic type (blocks in large doses)."
+      },
+      {
+        "name": "Atropine",
+        "page": 100,
+        "description": "Blocks cholinergic receptors; muscarinic type."
+      },
+      {
+        "name": "Hexamethonium",
+        "page": 100,
+        "description": "Blocks cholinergic receptors; nicotinic type."
+      },
+      {
+        "name": "Methacholine",
+        "page": 104,
+        "description": "Directly acting choline ester; stimulates only muscarinic receptors."
+      },
+      {
+        "name": "Carbachol",
+        "page": 104,
+        "description": "Directly acting choline ester; stimulates both muscarinic and nicotinic receptors."
+      },
+      {
+        "name": "Bethanechol",
+        "page": 104,
+        "description": "Directly acting choline ester; stimulates only muscarinic receptors."
+      },
+      {
+        "name": "Physostigmine",
+        "page": 104,
+        "description": "Reversible indirect acting anticholinesterase."
+      },
+      {
+        "name": "Neostigmine",
+        "page": 104,
+        "description": "Reversible indirect acting anticholinesterase."
+      },
+      {
+        "name": "DFP",
+        "page": 104,
+        "description": "(Di isopropyl fluorophosphate) Irreversible organophosphorus compound."
+      },
+      {
+        "name": "Echothiophate",
+        "page": 104,
+        "description": "Irreversible organophosphorus compound; noted that it cannot pass BBB."
+      },
+      {
+        "name": "Metriphonate",
+        "page": 104,
+        "description": "Irreversible organophosphorus compound."
+      },
+      {
+        "name": "Sarin, Soman, Tabun",
+        "page": 104,
+        "description": "War gases; irreversible organophosphorus compounds."
+      },
+      {
+        "name": "Cevimeline",
+        "page": 108,
+        "description": "Used for treatment of dry mouth (Xerostomia)."
+      },
+      {
+        "name": "Edrophonium",
+        "page": 109,
+        "description": "Used to diagnose Myasthenia Gravis and reverse neuromuscular blockers."
+      },
+      {
+        "name": "Donepezil",
+        "page": 109,
+        "description": "Anticholinesterase used in the treatment of Alzheimer\u2019s disease."
+      },
+      {
+        "name": "Physostigmine",
+        "page": 111,
+        "description": "Detailed comparison: Complete absorption, Passes BBB, used as strong miotic eye drops."
+      },
+      {
+        "name": "Neostigmine",
+        "page": 111,
+        "description": "Detailed comparison: Partial absorption, Cannot Pass BBB, powerful muscle stimulation, used for Myasthenia Gravis."
+      }
+    ]
+  },
+  {
+    "lecture": "Lecture 5: Parasympathomimetics & Lytics",
+    "drugs": [
+      {
+        "name": "Pralidoxime (PAM)",
+        "page": 123,
+        "description": "Cholinesterase regenerator (Oxime); restores skeletal muscle strength in organophosphorus poisoning."
+      },
+      {
+        "name": "Di-acetyl-monoxime (DAM)",
+        "page": 123,
+        "description": "Cholinesterase regenerator (Oxime) used in organophosphorus poisoning."
+      },
+      {
+        "name": "Diazepam",
+        "page": 123,
+        "description": "Anticonvulsant used for convulsions in organophosphorus poisoning."
+      },
+      {
+        "name": "Barbiturates",
+        "page": 123,
+        "description": "Anticonvulsant used in organophosphorus poisoning."
+      },
+      {
+        "name": "Atropine",
+        "page": 124,
+        "description": "Parasympatholytic prototype; Belladonna alkaloid; blocks muscarinic receptors; causes tachycardia and dry mouth."
+      },
+      {
+        "name": "Digitalis",
+        "page": 130,
+        "description": "Drug causing heart block (Atropine is used to treat block caused by it)."
+      },
+      {
+        "name": "Ipratropium",
+        "page": 130,
+        "description": "Inhalation parasympatholytic for bronchial asthma (preferred over atropine)."
+      },
+      {
+        "name": "Tiotropium",
+        "page": 130,
+        "description": "Inhalation parasympatholytic for bronchial asthma."
+      },
+      {
+        "name": "Emepronium",
+        "page": 130,
+        "description": "Parasympatholytic derivative used for nocturnal enuresis."
+      },
+      {
+        "name": "Oxybutynin",
+        "page": 133,
+        "description": "Image text indicates use for Acute cystitis."
+      },
+      {
+        "name": "Tolterodine",
+        "page": 133,
+        "description": "Image text indicates use for Urine incontinence."
+      },
+      {
+        "name": "Homatropine",
+        "page": 133,
+        "description": "Image text indicates use for Eye fundus examination."
+      },
+      {
+        "name": "Eucatropine",
+        "page": 133,
+        "description": "Image text indicates use for Eye fundus examination."
+      },
+      {
+        "name": "Hyoscine",
+        "page": 133,
+        "description": "(Buscopan) Used for Motion sickness, Renal and Intestinal colic."
+      },
+      {
+        "name": "Benztropine",
+        "page": 133,
+        "description": "Used for Parkinson's disease."
+      },
+      {
+        "name": "Pirenzepine",
+        "page": 133,
+        "description": "Used for Peptic ulcer."
+      },
+      {
+        "name": "Lomotil",
+        "page": 133,
+        "description": "(Atropine-diphenoxylate combo) Used for Diarrhea."
+      },
+      {
+        "name": "Botulinum toxin",
+        "page": 134,
+        "description": "(Botox) Paralytic; blocks nerve function by inhibition of Ach release; used for spasticity and wrinkles."
+      },
+      {
+        "name": "Carisoprodol",
+        "page": 134,
+        "description": "Antispasmodic; Central action; Prodrug of meprobamate; FDA approved for acute musculoskeletal pain; dependence risk."
+      },
+      {
+        "name": "Chlorzoxazone",
+        "page": 134,
+        "description": "Antispasmodic; acts at spinal cord/subcortical levels; side effect: hepatotoxicity."
+      },
+      {
+        "name": "Cyclobenzaprine",
+        "page": 134,
+        "description": "Antispasmodic; 5-HT2 receptor antagonist; brainstem action; strong anticholinergic effects."
+      },
+      {
+        "name": "Orphenadrine",
+        "page": 134,
+        "description": "Antispasmodic & Analgesic; unknown mechanism (maybe anticholinergic); used for Parkinsonism."
+      },
+      {
+        "name": "Methocarbamol",
+        "page": 134,
+        "description": "Antispasmodic; general CNS depression; side effect: black/brown/green urine."
+      },
+      {
+        "name": "Idrocilamide",
+        "page": 134,
+        "description": "Topical Antispasmodic cream; decreases sarcoplasmic reticulum calcium release."
+      },
+      {
+        "name": "Baclofen",
+        "page": 135,
+        "description": "Central Antispasticity; GABA-B agonist; inhibits glutamate release."
+      },
+      {
+        "name": "Tizanidine",
+        "page": 135,
+        "description": "Central Antispasticity; Alpha-2 agonist (presynaptic); related to clonidine; side effects include hypotension."
+      },
+      {
+        "name": "Gabapentin",
+        "page": 135,
+        "description": "Antispasticity/Analgesic; antiepileptic drug used for MS spasm."
+      },
+      {
+        "name": "Pregabalin",
+        "page": 135,
+        "description": "Antispasticity/Analgesic; analog of gabapentin."
+      },
+      {
+        "name": "Progabide",
+        "page": 135,
+        "description": "Central Antispasticity drug."
+      },
+      {
+        "name": "Dantrolene",
+        "page": 135,
+        "description": "Peripheral Antispasticity; Direct acting; blocks Ryanodine receptor (RyR1) / Ca release; used for Malignant Hyperthermia (IV)."
+      },
+      {
+        "name": "Hemicholinium",
+        "page": 135,
+        "description": "Experimental; Inhibits Acetylcholine synthesis."
+      },
+      {
+        "name": "Triethylcholine",
+        "page": 135,
+        "description": "Experimental; Inhibits Acetylcholine synthesis."
+      },
+      {
+        "name": "Vesamicol",
+        "page": 135,
+        "description": "Experimental; Inhibits Acetylcholine storage."
+      },
+      {
+        "name": "Tubocurarine",
+        "page": 136,
+        "description": "(Curare) Competitive Neuromuscular Blocker (NMB); Kidney elimination, moderate histamine release."
+      },
+      {
+        "name": "Atracurium",
+        "page": 136,
+        "description": "Competitive NMB; Spontaneous 'Hofmann elimination', slight histamine release."
+      },
+      {
+        "name": "Cisatracurium",
+        "page": 136,
+        "description": "Competitive NMB; Mostly spontaneous elimination, no histamine release."
+      },
+      {
+        "name": "Pancuronium",
+        "page": 136,
+        "description": "Competitive NMB; Kidney elimination, moderate cardiac M2 block."
+      },
+      {
+        "name": "Rocuronium",
+        "page": 136,
+        "description": "Competitive NMB; Liver/Kidney elimination, fastest onset, shortest action."
+      },
+      {
+        "name": "Succinylcholine",
+        "page": 136,
+        "description": "Depolarizing NMB; Phase I & II block; causes malignant hyperthermia/apnea."
+      }
+    ]
+  },
+  {
+    "lecture": "Lecture 6: Skeletal Muscle Relaxants (NMBs)",
+    "drugs": [
+      {
+        "name": "Meprobamate",
+        "page": 147,
+        "description": "Anxiolytic agent mentioned as the parent drug of Carisoprodol (risk of abuse)."
+      }
+    ]
+  },
+  {
+    "lecture": "Lecture 7: Sympathomimetics",
+    "drugs": [
+      {
+        "name": "Isoprenaline",
+        "page": 163,
+        "description": "(Isoproterenol) Synthetic Catecholamine; Non-selective Beta agonist."
+      },
+      {
+        "name": "Dobutamine",
+        "page": 163,
+        "description": "Synthetic Catecholamine; Selective Beta1 + Weak Alpha; used for Heart Failure/Shock."
+      },
+      {
+        "name": "Ephedrine",
+        "page": 163,
+        "description": "Non-catecholamine / CNS Stimulant."
+      },
+      {
+        "name": "Amphetamine",
+        "page": 163,
+        "description": "Non-catecholamine / CNS Stimulant."
+      },
+      {
+        "name": "Metamphetamine",
+        "page": 163,
+        "description": "Non-catecholamine / CNS Stimulant."
+      },
+      {
+        "name": "Adrenaline",
+        "page": 164,
+        "description": "(Epinephrine) Natural catecholamine; Alpha & Beta agonist; used for anaphylaxis and cardiac resuscitation."
+      },
+      {
+        "name": "Noradrenaline",
+        "page": 173,
+        "description": "(Norepinephrine) Natural catecholamine; Alpha + Weak Beta1; IV infusion only (causes necrosis SC/IM); used for shock."
+      },
+      {
+        "name": "Dopamine",
+        "page": 176,
+        "description": "Sympathomimetic; D1 (low dose), Beta1 (moderate dose), Alpha (high dose) effects."
+      },
+      {
+        "name": "Phenylephrine",
+        "page": 180,
+        "description": "Alpha-1 Agonist; Vasopressor."
+      },
+      {
+        "name": "Phenylpropanolamine",
+        "page": 180,
+        "description": "Alpha-1 Agonist; Nasal Decongestant (Oral/Local)."
+      },
+      {
+        "name": "Naphazoline",
+        "page": 180,
+        "description": "Alpha-1 Agonist; Nasal Decongestant."
+      },
+      {
+        "name": "Tetrahydrozoline",
+        "page": 180,
+        "description": "Alpha-1 Agonist; Nasal Decongestant."
+      },
+      {
+        "name": "Xylometazoline",
+        "page": 180,
+        "description": "Alpha-1 Agonist; Nasal Decongestant."
+      },
+      {
+        "name": "Clonidine",
+        "page": 180,
+        "description": "Alpha-2 Agonist; Anti-hypertensive."
+      },
+      {
+        "name": "Ritodrine",
+        "page": 180,
+        "description": "Beta-2 Agonist; Uterine relaxant."
+      },
+      {
+        "name": "Phentolamine",
+        "page": 182,
+        "description": "Alpha adrenergic blocker."
+      },
+      {
+        "name": "Propranolol",
+        "page": 182,
+        "description": "Beta adrenergic blocker (Non-selective)."
+      },
+
+      {
+        "name": "Guanfacine",
+        "page": 182,
+        "description": "Central alpha-2 agonist; inhibits noradrenaline release."
+      },
+      {
+        "name": "Alpha-methyldopa",
+        "page": 182,
+        "description": "Central alpha-2 agonist; inhibits noradrenaline release."
+      }
+    ]
+  },
+  {
+    "lecture": "Lecture 8: Sympatholytics",
+    "drugs": [
+      {
+        "name": "Prazosin",
+        "page": 183,
+        "description": "Selective Alpha-1 blocker (long duration)."
+      },
+      {
+        "name": "Doxazosin",
+        "page": 183,
+        "description": "Selective Alpha-1 blocker (long duration)."
+      },
+      {
+        "name": "Tamsulosin",
+        "page": 183,
+        "description": "Selective Alpha-1A blocker; more effective for Benign Prostatic Hyperplasia (BPH)."
+      },
+      {
+        "name": "Nadolol",
+        "page": 185,
+        "description": "Non-selective Beta blocker."
+      },
+      {
+        "name": "Oxprenolol",
+        "page": 185,
+        "description": "Non-selective Beta blocker."
+      },
+      {
+        "name": "Pindolol",
+        "page": 185,
+        "description": "Non-selective Beta blocker."
+      },
+      {
+        "name": "Sotalol",
+        "page": 185,
+        "description": "Non-selective Beta blocker."
+      },
+      {
+        "name": "Timolol",
+        "page": 185,
+        "description": "Beta blocker; Eye drops for Open angle glaucoma (decreases IOP)."
+      },
+      {
+        "name": "Betaxolol",
+        "page": 185,
+        "description": "Beta blocker on eye."
+      },
+      {
+        "name": "Levobunolol",
+        "page": 185,
+        "description": "Beta blocker on eye."
+      },
+      {
+        "name": "Carteolol",
+        "page": 185,
+        "description": "Beta blocker on eye."
+      },
+      {
+        "name": "Metoprolol",
+        "page": 185,
+        "description": "Selective Beta-1 blocker."
+      },
+      {
+        "name": "Atenolol",
+        "page": 185,
+        "description": "Selective Beta-1 blocker."
+      },
+      {
+        "name": "Acebutolol",
+        "page": 185,
+        "description": "Selective Beta-1 blocker."
+      },
+      {
+        "name": "Bisoprolol",
+        "page": 185,
+        "description": "Selective Beta-1 blocker."
+      },
+      {
+        "name": "Nebivolol",
+        "page": 185,
+        "description": "Selective Beta-1 blocker."
+      },
+      {
+        "name": "Esmolol",
+        "page": 185,
+        "description": "Selective Beta-1 blocker."
+      },
+      {
+        "name": "Butoxamine",
+        "page": 185,
+        "description": "Selective Beta-2 blocker (not used, academic interest)."
+      },
+      {
+        "name": "Labetalol",
+        "page": 185,
+        "description": "Blocks Beta & Alpha-1."
+      },
+      {
+        "name": "Carvedilol",
+        "page": 185,
+        "description": "Blocks Beta & Alpha-1."
+      },
+      {
+        "name": "Medroxalol",
+        "page": 185,
+        "description": "Blocks Beta & Alpha-1."
+      },
+      {
+        "name": "Bucindolol",
+        "page": 185,
+        "description": "Blocks Beta & Alpha-1."
+      }
+    ]
+  },
+  {
+    "lecture": "Lecture 9: NSAIDs - Aspirin",
+    "drugs": [
+      {
+        "name": "Aspirin",
+        "page": 192,
+        "description": "Prototype NSAID; Acetylsalicylic acid; Irreversible COX inhibitor; Antiplatelet; risk of Reye's Syndrome in children."
+      },
+      {
+        "name": "Methylsalicylate",
+        "page": 200,
+        "description": "Topical counterirritant."
+      },
+      {
+        "name": "Salicylic acid",
+        "page": 200,
+        "description": "Topical keratolytic used for Warts, Corns, Callus."
+      }
+    ]
+  },
+  {
+    "lecture": "Lecture 10: Other NSAIDs & Opioids",
+    "drugs": [
+      {
+        "name": "Ibuprofen",
+        "page": 208,
+        "description": "NSAID; Reversible COX inhibitor; No antiplatelet effect; Safer alternative for children."
+      },
+      {
+        "name": "Naproxen",
+        "page": 208,
+        "description": "NSAID; No antiplatelet effect."
+      },
+      {
+        "name": "Ketoprofen",
+        "page": 208,
+        "description": "NSAID; No antiplatelet effect."
+      },
+      {
+        "name": "Indomethacin",
+        "page": 208,
+        "description": "Most potent COX inhibitor NSAID; causes Neurotoxicity and greater GIT distress."
+      },
+      {
+        "name": "Diclofenac",
+        "page": 208,
+        "description": "NSAID; Rapid onset, Short duration; More nephrotoxic."
+      },
+      {
+        "name": "Piroxicam",
+        "page": 208,
+        "description": "NSAID; Long duration (once daily)."
+      },
+      {
+        "name": "Meloxicam",
+        "page": 208,
+        "description": "NSAID; Preferential inhibition of COX-2; Long duration."
+      },
+      {
+        "name": "Tolmetin",
+        "page": 208,
+        "description": "NSAID."
+      },
+      {
+        "name": "Ketorolac",
+        "page": 208,
+        "description": "NSAID; Potent analgesic (comparable to morphine); Little anti-inflammatory action."
+      },
+      {
+        "name": "Celecoxib",
+        "page": 208,
+        "description": "COX-2 Inhibitor (Prototype); Lower gastric ulcer risk; Contraindicated in sulfonamide allergy."
+      },
+      {
+        "name": "Phenylbutazone",
+        "page": 210,
+        "description": "NSAID; Many severe adverse effects (Avoid); Bone marrow depression."
+      },
+      {
+        "name": "Dipyrone",
+        "page": 210,
+        "description": "NSAID; Avoid due to Bone marrow depression -> Agranulocytosis."
+      },
+      {
+        "name": "Rofecoxib",
+        "page": 213,
+        "description": "COX-2 Inhibitor; Withdrawn from market due to increased risk of myocardial infarction."
+      },
+      {
+        "name": "Acetaminophen",
+        "page": 215,
+        "description": "(Paracetamol) Analgesic/Antipyretic; NOT an NSAID (no anti-inflammatory effect); Safe in asthma/children."
+      },
+      {
+        "name": "N-acetylcysteine",
+        "page": 216,
+        "description": "Specific Antidote for Paracetamol toxicity; Lifesaving; Bad odor and taste."
+      },
+      {
+        "name": "Codeine",
+        "page": 217,
+        "description": "Natural Opioid (Methylmorphine); Less potent/addictive than morphine; used as Antitussive."
+      },
+      {
+        "name": "Heroin",
+        "page": 217,
+        "description": "Semisynthetic Opioid (Diacetylmorphine); Removed from market due to high addiction."
+      },
+      {
+        "name": "Dihydromorphinone",
+        "page": 217,
+        "description": "Semisynthetic Opioid derivative."
+      },
+      {
+        "name": "Dihydrocodeinone",
+        "page": 217,
+        "description": "Semisynthetic Opioid derivative."
+      },
+      {
+        "name": "Meperidine",
+        "page": 217,
+        "description": "Synthetic Opioid; Atropine-like action (spasmolytic); Safer in MI."
+      },
+      {
+        "name": "Fentanyl",
+        "page": 217,
+        "description": "Synthetic Opioid; More potent than morphine; Used as patches."
+      },
+      {
+        "name": "Methadone",
+        "page": 217,
+        "description": "Synthetic Opioid; Equipotent to morphine but less addictive; Main use is Morphine addiction treatment."
+      },
+      {
+        "name": "Tramadol",
+        "page": 217,
+        "description": "Synthetic Opioid; Inhibits uptake of NE/Serotonin; Risk of seizures."
+      },
+      {
+        "name": "Naloxone",
+        "page": 219,
+        "description": "Specific morphine antagonist; Antidote for acute morphine poisoning/neonatal asphyxia; Injection (short duration)."
+      },
+      {
+        "name": "Naltrexone",
+        "page": 232,
+        "description": "Specific morphine antagonist; Oral; Long duration of action."
+      }
+    ]
+  },
+  {
+    "lecture": "Lecture 11: Opioids Continued",
+    "drugs": [
+      {
+        "name": "Loperamide",
+        "page": 241,
+        "description": "Opioid agonist (peripheral only, no BBB pass); Used for Diarrhea."
+      },
+      {
+        "name": "Diphenoxylate",
+        "page": 241,
+        "description": "Opioid agonist (peripheral); Used for Diarrhea; Mixed with atropine to prevent dependence."
+      },
+      {
+        "name": "Nalbuphine",
+        "page": 242,
+        "description": "Mixed agonist/antagonist Opioid; Analgesic in severe pain."
+      },
+      {
+        "name": "Nalorphine",
+        "page": 242,
+        "description": "Mixed agonist/antagonist Opioid."
+      },
+      {
+        "name": "Butorphanol",
+        "page": 242,
+        "description": "Mixed agonist/antagonist Opioid."
+      },
+      {
+        "name": "Pentazocine",
+        "page": 242,
+        "description": "Mixed agonist/antagonist Opioid."
+      }
+    ]
+  }
+],
+                questionsData: [
+  {
+    "lecture": "Lecture 1: Basic Principles",
+    "questions": [
+      {
+        "id": 1,
+        "question": "Define Pharmacology.",
+        "answer": "Pharmacology is the science that deals with drugs and the scientific principles of drug action on living organisms.",
+        "page": 5
+      },
+      {
+        "id": 2,
+        "question": "Define Drugs.",
+        "answer": "Drugs are any substances that can be used in the diagnosis, prevention, and treatment of disease.",
+        "page": 5
+      },
+      {
+        "id": 3,
+        "question": "Define Medicine.",
+        "answer": "A medicine is a chemical preparation, which contains one or more drugs, administered with the intention of producing a therapeutic effect.",
+        "page": 5
+      },
+      {
+        "id": 4,
+        "question": "Why do physical therapy students study pharmacology?",
+        "answer": "To understand how medications affect a patient's physical function and rehabilitation process, ensure patient safety, plan effective treatment, monitor for adverse drug reactions, and communicate effectively with other healthcare providers.",
+        "page": 5
+      },
+      {
+        "id": 5,
+        "question": "List the key reasons for studying Pharmacology.",
+        "answer": "1. Patient Safety and Efficacy.\n2. Treatment Planning.\n3. Recognizing Side Effects.\n4. Medication Adherence and Education.\n5. Interprofessional Communication.",
+        "page": 6
+      },
+      {
+        "id": 6,
+        "question": "List the sources of drugs with examples.",
+        "answer": "1. Natural: \n- Plant (e.g., Digoxin).\n- Microorganism (e.g., Penicillin).\n2. Synthetic: \n- Chemically (e.g., Sulphonamide).\n- Genetically engineering (e.g., Human insulin).",
+        "page": 8
+      },
+      {
+        "id": 7,
+        "question": "Enumerate the classes of drugs.",
+        "answer": "1. Prescription only medication (POM).\n2. Over the counter (OTC) drugs.",
+        "page": 9
+      },
+      {
+        "id": 8,
+        "question": "What are the types of drug nomenclature (names)?",
+        "answer": "1. Chemical name.\n2. Non-proprietary (Generic) name.\n3. Proprietary (Commercial/Trade) name.",
+        "page": 10
+      },
+      {
+        "id": 9,
+        "question": "Enumerate the routes of drug administration.",
+        "answer": "1. Enteral (Oral, Sublingual/buccal).\n2. Parenteral (IV, IM, SC, ID).\n3. Other injections (Intra-cardiac, Intra-peritoneal, Intrathecal).\n4. Inhalation.\n5. Topical.",
+        "page": 11
+      },
+      {
+        "id": 10,
+        "question": "What are the advantages of oral administration?",
+        "answer": "Safest, most common, convenient, economical, easily self-administered, and toxicities can be overcome with antidotes like activated charcoal.",
+        "page": 11
+      },
+      {
+        "id": 11,
+        "question": "What are the disadvantages of oral administration?",
+        "answer": "Not suitable for vomiting/diarrhea, not suitable in emergencies, and subject to the First pass effect.",
+        "page": 11
+      },
+      {
+        "id": 12,
+        "question": "How can the hepatic first pass effect be overcome?",
+        "answer": "If partial: Increase the dose of the drug.\nIf complete: Use another route such as IV or sublingual.",
+        "page": 11
+      },
+      {
+        "id": 13,
+        "question": "Explain the purpose of Enteric-coated preparations.",
+        "answer": "To protect acid-unstable drugs (e.g., omeprazole) from stomach acid and to protect the stomach from irritating drugs (e.g., aspirin).",
+        "page": 12
+      },
+      {
+        "id": 14,
+        "question": "What are the advantages of Extended-release preparations?",
+        "answer": "They allow for slower absorption, prolonged duration of action, less frequent dosing (improving compliance), and maintain therapeutic range concentrations for longer periods.",
+        "page": 13
+      },
+      {
+        "id": 15,
+        "question": "What are the advantages of Sublingual/Buccal administration?",
+        "answer": "Ease of administration, rapid absorption, and avoidance of first pass metabolism.",
+        "page": 14
+      },
+      {
+        "id": 16,
+        "question": "List the advantages and disadvantages of Intravenous injection (IV).",
+        "answer": "Advantages: 100% bioavailability, no first pass effect, suitable for emergencies, irritant drugs, large volumes, and comatose/vomiting patients.\nDisadvantages: Must be sterile, not suitable for oily/suspended drugs, risk of infection, requires a professional.",
+        "page": 15
+      },
+      {
+        "id": 17,
+        "question": "Compare Intramuscular (IM) and Subcutaneous (SC) injections regarding absorption.",
+        "answer": "IM has better absorption than SC due to high vascularity of skeletal muscles. SC absorption is slower than IV and IM.",
+        "page": 16
+      },
+      {
+        "id": 18,
+        "question": "Define Intra-cardiac, Intra-peritoneal, and Intrathecal injections.",
+        "answer": "Intra-cardiac: Injected directly into heart muscles (emergencies).\nIntra-peritoneal: Into peritoneal cavity (chemotherapy for ovarian cancer).\nIntrathecal: Into spinal canal/subarachnoid space (spinal anesthesia/chemotherapy).",
+        "page": 18
+      },
+      {
+        "id": 19,
+        "question": "What are the advantages of Inhalation route?",
+        "answer": "Rapid delivery across large surface area, rapid effect (almost as IV), effective for respiratory disorders (local action), minimizes systemic side effects.",
+        "page": 18
+      },
+      {
+        "id": 20,
+        "question": "Define Pharmacotherapy and give examples in health and disease.",
+        "answer": "Pharmacotherapy is the use of drugs to treat, cure, or prevent diseases. \nIn Health (Prophylaxis): e.g., statins for CVD, vaccines.\nIn Disease (Treatment): e.g., antibiotics for infection, antidepressants for depression.",
+        "page": 21
+      },
+      {
+        "id": 21,
+        "question": "List the mechanisms of drug absorption.",
+        "answer": "1. Passive transport (Simple diffusion, Facilitated diffusion).\n2. Active transport.\n3. Endocytosis and exocytosis.",
+        "page": 23
+      },
+      {
+        "id": 22,
+        "question": "List the patient-related factors affecting absorption.",
+        "answer": "1. Route of administration.\n2. Absorbing surface area.\n3. Blood flow to the absorption site.\n4. Expression of P-glycoprotein.\n5. Gastrointestinal motility.",
+        "page": 27
+      },
+      {
+        "id": 23,
+        "question": "List the drug-related factors affecting absorption.",
+        "answer": "1. Lipid solubility.\n2. Ionization.\n3. Valency.\n4. Nature (inorganic vs organic).\n5. Pharmaceutical preparation.\n6. PH of the drug.\n7. Physicochemical factors.",
+        "page": 29
+      }
+    ]
+  },
+  {
+    "lecture": "Lecture 2: Pharmacokinetics & Pharmacodynamics",
+    "questions": [
+      {
+        "id": 24,
+        "question": "Define Bioavailability and how is it determined?",
+        "answer": "It is the fraction of chemically unchanged drug reaching systemic circulation. Determined by comparing plasma levels (AUC) after oral administration vs IV administration.",
+        "page": 32
+      },
+      {
+        "id": 25,
+        "question": "What is the effect of plasma protein binding on drug distribution?",
+        "answer": "Increase in binding decreases distribution. Albumin acts as a reservoir; the bound form is inactive and non-diffusible.",
+        "page": 34
+      },
+      {
+        "id": 26,
+        "question": "Define Volume of Distribution (Vd) and its relation to protein binding.",
+        "answer": "Vd is the apparent volume of fluid into which a drug is dispersed. High Vd indicates low affinity to plasma proteins; Low Vd indicates high affinity to plasma proteins.",
+        "page": 35
+      },
+      {
+        "id": 27,
+        "question": "Describe Phase I and Phase II metabolism.",
+        "answer": "Phase I: Conversion to more polar molecules via reduction, oxidation, or hydrolysis (Cytochrome P450).\nPhase II: Conjugation reactions (e.g., with glucuronic acid) making the drug highly polar for excretion.",
+        "page": 36
+      },
+      {
+        "id": 28,
+        "question": "List the results of metabolism.",
+        "answer": "1. Active drug -> Inactive.\n2. Inactive drug (prodrug) -> Active.\n3. Active drug -> Active.\n4. Non-toxic drug -> Toxic.",
+        "page": 38
+      },
+      {
+        "id": 29,
+        "question": "List the factors affecting metabolism.",
+        "answer": "1. Age (e.g., Grey baby syndrome).\n2. Sex differences.\n3. State of health.\n4. Inhibition of microsomal enzymes.\n5. Induction of microsomal enzymes.",
+        "page": 39
+      },
+      {
+        "id": 30,
+        "question": "Enumerate the routes of drug excretion.",
+        "answer": "1. Renal (Urine).\n2. GIT (Saliva, Stomach, Bile).\n3. Skin (Sweat).\n4. Breast milk.\n5. Lung.",
+        "page": 41
+      },
+      {
+        "id": 31,
+        "question": "How does urine pH affect renal excretion of drugs?",
+        "answer": "Acidification (Vit C) increases excretion of basic drugs (e.g., ephedrine). Alkalization (NaHCO3) increases excretion of acidic drugs (e.g., aspirin).",
+        "page": 42
+      },
+      {
+        "id": 32,
+        "question": "Define Pharmacodynamics and drug targets.",
+        "answer": "Pharmacodynamics describes the actions of a drug on the body. Drug targets include Receptors, Enzymes, Carrier molecules, and Ion channels.",
+        "page": 44
+      },
+      {
+        "id": 33,
+        "question": "Classify receptors with examples.",
+        "answer": "1. Ligand-gated ion channels (Cholinergic Nicotinic).\n2. G-Protein-coupled receptors (Alpha/Beta adrenoceptors).\n3. Enzyme linked receptors (Insulin).\n4. Intracellular receptors (Steroid hormones).",
+        "page": 46
+      },
+      {
+        "id": 34,
+        "question": "Differentiate between Potency and Efficacy.",
+        "answer": "Potency: Amount of drug necessary to produce 50% of maximum effect (EC50).\nEfficacy: The maximal biologic response a drug can produce (Emax).",
+        "page": 50
+      },
+      {
+        "id": 35,
+        "question": "Compare Full Agonists, Partial Agonists, and Antagonists.",
+        "answer": "Full Agonist: Intrinsic activity of 1 (Maximal response).\nPartial Agonist: Intrinsic activity >0 but <1.\nAntagonist: High affinity but zero intrinsic activity.",
+        "page": 51
+      },
+      {
+        "id": 36,
+        "question": "Compare Competitive and Noncompetitive Antagonists.",
+        "answer": "Competitive: Reversible binding, overcomes by increasing agonist, reduces potency.\nNoncompetitive: Irreversible binding, cannot be overcome, reduces efficacy (Emax).",
+        "page": 54
+      },
+      {
+        "id": 37,
+        "question": "Define Functional Antagonism with an example.",
+        "answer": "Antagonist acts at a completely separate receptor initiating opposite effects (e.g., Epinephrine bronchodilation vs Histamine bronchoconstriction).",
+        "page": 56
+      },
+      {
+        "id": 38,
+        "question": "Explain Myasthenia Gravis mechanism and treatment.",
+        "answer": "Mechanism: Autoantibodies destroy nicotinic acetylcholine receptors.\nTreatment: Cholinesterase inhibitors (Pyridostigmine), Corticosteroids, Immunosuppressants, Plasmapheresis.",
+        "page": 57
+      }
+    ]
+  },
+  {
+    "lecture": "Lecture 3: Dose & Drug Safety",
+    "questions": [
+      {
+        "id": 39,
+        "question": "Enumerate the types of doses.",
+        "answer": "Therapeutic dose, Maximum tolerated dose, Initial dose, Maintenance dose, Lethal dose.",
+        "page": 63
+      },
+      {
+        "id": 40,
+        "question": "Define Therapeutic Index (TI) and its significance.",
+        "answer": "TI = LD50 / ED50. It measures drug safety; a larger value indicates a safer drug.",
+        "page": 64
+      },
+      {
+        "id": 41,
+        "question": "List factors affecting dosage and action of drugs.",
+        "answer": "1. Age, weight, body surface area.\n2. Sex.\n3. Pregnancy/Lactation.\n4. Route of administration.\n5. Time of administration.\n6. Genetic abnormality (e.g., G6PD deficiency).",
+        "page": 66
+      },
+      {
+        "id": 42,
+        "question": "Classify Adverse Drug Reactions.",
+        "answer": "1. Dose-related: Excessive therapeutic effect, Side effects, Secondary effects.\n2. Non-dose related: Drug idiosyncrasy, Hypersensitivity, Tolerance.",
+        "page": 70
+      },
+      {
+        "id": 43,
+        "question": "Differentiate between Drug Idiosyncrasy and Hypersensitivity.",
+        "answer": "Idiosyncrasy: Genetic abnormality (e.g., Chloramphenicol aplastic anemia).\nHypersensitivity: Immune response/Antigen-Antibody reaction (e.g., Penicillin anaphylaxis).",
+        "page": 72
+      },
+      {
+        "id": 44,
+        "question": "Define Tolerance and its types.",
+        "answer": "Failure of responsiveness to the usual dose. Types: Congenital and Acquired.",
+        "page": 72
+      },
+      {
+        "id": 45,
+        "question": "Compare Desensitization (Tachyphylaxis) and Tolerance.",
+        "answer": "Desensitization develops in few minutes. Tolerance develops over days or weeks.",
+        "page": 73
+      },
+      {
+        "id": 46,
+        "question": "Compare Habituation and Addiction.",
+        "answer": "Habituation: Mild dependence, psychic only (e.g., Coffee).\nAddiction: Serious, psychic and physical dependence, withdrawal reverses normal action (e.g., Morphine).",
+        "page": 74
+      },
+      {
+        "id": 47,
+        "question": "List types of Pharmacokinetic Drug Interactions with examples.",
+        "answer": "1. Absorption (Atropine decreases gastric emptying).\n2. Distribution (Aspirin displaces warfarin).\n3. Metabolism (Enzyme inducers/inhibitors).\n4. Excretion (Probenecid decreases penicillin excretion).",
+        "page": 75
+      },
+      {
+        "id": 48,
+        "question": "List types of Pharmacodynamic Interactions.",
+        "answer": "1. Addition (1+1=2).\n2. Synergism (1+1>2).\n3. Potentiation (0+1=1).",
+        "page": 76
+      },
+      {
+        "id": 49,
+        "question": "Discuss drug safety in Pregnancy.",
+        "answer": "Consult specialist; specific trimesters are critical; avoid teratogens (Thalidomide, Isotretinoin).",
+        "page": 78
+      },
+      {
+        "id": 50,
+        "question": "Why are Geriatrics vulnerable to medications?",
+        "answer": "Decline in liver/kidney function, impaired memory, chronic illnesses/polypharmacy, dietary/herbal interactions.",
+        "page": 82
+      },
+      {
+        "id": 51,
+        "question": "Why caution is needed with Pediatrics?",
+        "answer": "Immature vital organs, lack of studies, need for exact weight-based dosing, risk of specific toxicities (Reye's syndrome with Aspirin).",
+        "page": 84
+      }
+    ]
+  },
+  {
+    "lecture": "Lecture 4: Autonomic Nervous System - Cholinergics",
+    "questions": [
+      {
+        "id": 52,
+        "question": "Classify the Nervous System.",
+        "answer": "1. Central Nervous System (Brain, Spinal Cord).\n2. Peripheral Nervous System (Somatic, Autonomic).",
+        "page": 93
+      },
+      {
+        "id": 53,
+        "question": "Compare Somatic and Autonomic Nervous Systems.",
+        "answer": "Somatic: Voluntary (skeletal muscle).\nAutonomic: Involuntary (smooth muscle, cardiac muscle, glands).",
+        "page": 93
+      },
+      {
+        "id": 54,
+        "question": "List the Chemical Neurotransmitters in ANS.",
+        "answer": "Acetylcholine, Noradrenaline, Adrenaline, Dopamine, Serotonin.",
+        "page": 98
+      },
+      {
+        "id": 55,
+        "question": "Enumerate sites of Acetylcholine release.",
+        "answer": "1. All preganglionic neurons.\n2. Parasympathetic postganglionic neurons.\n3. Sympathetic postganglionic to sweat glands/skeletal vessels.\n4. Neuromuscular junction.",
+        "page": 98
+      },
+      {
+        "id": 56,
+        "question": "Classify Cholinergic Receptors.",
+        "answer": "1. Muscarinic (Postganglionic parasympathetic).\n2. Nicotinic (Ganglia, NMJ).",
+        "page": 100
+      },
+      {
+        "id": 57,
+        "question": "Classify Parasympathomimetics (Cholinomimetics).",
+        "answer": "1. Directly acting: Choline esters (Acetylcholine, Bethanechol) and Alkaloids (Pilocarpine).\n2. Indirectly acting (Anticholinesterases): Reversible (Neostigmine) and Irreversible (Organophosphates).",
+        "page": 104
+      },
+      {
+        "id": 58,
+        "question": "List Pharmacological Actions of Parasympathomimetics.",
+        "answer": "Eye: Miosis, Accommodation, Decrease IOP.\nCVS: Bradycardia, Vasodilatation.\nBronchi: Bronchospasm.\nGIT: Increased motility/secretions.\nUrinary: Contract bladder/relax sphincter.\nSecretions: Increased.\nNMJ: Muscle twitches.",
+        "page": 105
+      },
+      {
+        "id": 59,
+        "question": "Enumerate Uses of Parasympathomimetics.",
+        "answer": "Dry mouth, Glaucoma, Paralytic ileus, Urine retention, Myasthenia gravis, Curare toxicity, Atropine poisoning, Alzheimer's.",
+        "page": 108
+      },
+      {
+        "id": 60,
+        "question": "Compare Physostigmine and Neostigmine.",
+        "answer": "Physostigmine: Complete absorption, Passes BBB, Used for glaucoma/atropine poisoning.\nNeostigmine: Partial absorption, No BBB, Direct action on skeletal muscle, Used for MG/Ileus.",
+        "page": 111
+      }
+    ]
+  },
+  {
+    "lecture": "Lecture 5: Parasympathomimetics & Lytics",
+    "questions": [
+      {
+        "id": 61,
+        "question": "List Neostigmine Substitutes and their uses.",
+        "answer": "1. Edrophonium (Diagnosis of MG).\n2. Pyridostigmine (Treatment of MG).\n3. Donepezil (Alzheimer's).",
+        "page": 116
+      },
+      {
+        "id": 62,
+        "question": "Describe Organophosphorus Poisoning mechanism and symptoms.",
+        "answer": "Mechanism: Irreversible inhibition of acetylcholinesterase.\nSymptoms: Muscarinic (Miosis, Salivation, Bronchospasm), Nicotinic (Twitches, Paralysis), CNS (Confusion, Coma).",
+        "page": 118
+      },
+      {
+        "id": 63,
+        "question": "Outline the treatment of Organophosphorus Poisoning.",
+        "answer": "Prophylaxis, Positioning, Respiration care, Decontamination, Stomach wash, Atropine (large dose), Cholinesterase regenerators (Oximes), Anticonvulsants.",
+        "page": 122
+      },
+      {
+        "id": 64,
+        "question": "Describe the Pharmacological Actions of Atropine.",
+        "answer": "CVS: Tachycardia.\nEye: Mydriasis, Cycloplegia, Increase IOP.\nResp: Bronchodilation, reduce secretions.\nGIT: Antispasmodic, constipation.\nUrinary: Retention.\nSecretions: Reduced (Dry mouth).",
+        "page": 125
+      },
+      {
+        "id": 65,
+        "question": "Enumerate Uses of Atropine and Parasympatholytics.",
+        "answer": "Preanesthetic medication, Heart block, Fundus exam, Bronchial asthma (Ipratropium), Intestinal/Renal colic, Organophosphorus toxicity.",
+        "page": 129
+      },
+      {
+        "id": 66,
+        "question": "List symptoms of Atropine Toxicity.",
+        "answer": "Tachycardia, Mydriasis, Constipation, Urine retention, Dry mouth/skin, CNS excitation (hallucinations/convulsions).",
+        "page": 131
+      },
+      {
+        "id": 67,
+        "question": "What is the treatment for Atropine Toxicity?",
+        "answer": "Gastric lavage (tannic acid), Artificial respiration, Cold fomentation, Diazepam, Physostigmine (Specific antidote).",
+        "page": 132
+      },
+      {
+        "id": 68,
+        "question": "List Contraindications of Atropine.",
+        "answer": "Angina/Arrhythmia, Glaucoma, Constipation/Ileus, Enlarged prostate, Fevers.",
+        "page": 132
+      },
+      {
+        "id": 69,
+        "question": "Classify Skeletal Muscle Relaxants.",
+        "answer": "1. Paralytic drugs: Neuromuscular blockers (Competitive, Depolarizing), Botulinum toxin.\n2. Spasmolytic drugs: Antispasmodic, Antispasticity.",
+        "page": 134
+      },
+      {
+        "id": 75,
+        "question": "List Antispasmodic drugs.",
+        "answer": "Carisoprodol, Chlorzoxazone, Cyclobenzaprine, Orphenadrine, Methocarbamol, Idrocilamide.",
+        "page": 134
+      },
+      {
+        "id": 78,
+        "question": "List Antispasticity drugs.",
+        "answer": "Central: Baclofen, Tizanidine, Diazepam, Gabapentin.\nPeripheral: Dantrolene.",
+        "page": 135
+      },
+      {
+        "id": 70,
+        "question": "Classify Neuromuscular Blockers.",
+        "answer": "1. Competitive (e.g., Tubocurarine, Atracurium).\n2. Depolarizing (Succinylcholine).",
+        "page": 136
+      },
+      {
+        "id": 71,
+        "question": "Explain the mechanism of action of Competitive NMBs.",
+        "answer": "Compete with Acetylcholine at nicotinic receptors on motor endplate, preventing depolarization and causing paralysis.",
+        "page": 138
+      },
+      {
+        "id": 72,
+        "question": "How is Competitive NM Blockade reversed?",
+        "answer": "Using Neostigmine or Pyridostigmine (AChE inhibitors) to increase ACh accumulation and displace the blocker.",
+        "page": 141
+      },
+      {
+        "id": 73,
+        "question": "Explain the mechanism of Succinylcholine.",
+        "answer": "Phase I: Activates receptors (contraction) then persistent depolarization (paralysis).\nPhase II: Receptor desensitization.",
+        "page": 143
+      },
+      {
+        "id": 74,
+        "question": "What are the adverse effects of Succinylcholine?",
+        "answer": "Transient bradycardia, Prolonged apnea (pseudocholinesterase deficiency), Malignant hyperthermia, Hyperkalemia, Increased IOP, Muscle pain.",
+        "page": 144
+      }
+    ]
+  },
+  {
+    "lecture": "Lecture 6: Skeletal Muscle Relaxants (NMBs)",
+    "questions": [
+      {
+        "id": 76,
+        "question": "Describe the mechanism and use of Carisoprodol.",
+        "answer": "Central action (GABA-A agonist?), prodrug of meprobamate. Used for acute musculoskeletal conditions. Caution: Dependence.",
+        "page": 147
+      },
+      {
+        "id": 77,
+        "question": "Describe the mechanism and use of Cyclobenzaprine.",
+        "answer": "5-HT2 receptor antagonist at brainstem level. Structure similar to TCAs. Used for acute painful musculoskeletal conditions.",
+        "page": 148
+      },
+      {
+        "id": 79,
+        "question": "What is the mechanism of action of Baclofen?",
+        "answer": "GABA-B agonist. Presynaptic inhibition of glutamate release and postsynaptic inhibition of motor neurons.",
+        "page": 154
+      },
+      {
+        "id": 80,
+        "question": "What is the mechanism of action of Dantrolene?",
+        "answer": "Interferes with calcium release from sarcoplasmic reticulum by blocking ryanodine receptors (RyR1).",
+        "page": 159
+      },
+      {
+        "id": 81,
+        "question": "What are the uses of Dantrolene?",
+        "answer": "Chronic muscle spasticity (Oral), Malignant hyperthermia (IV).",
+        "page": 160
+      }
+    ]
+  },
+  {
+    "lecture": "Lecture 7: Sympathomimetics",
+    "questions": [
+      {
+        "id": 82,
+        "question": "Classify Sympathomimetics.",
+        "answer": "1. Catecholamines (Natural: Adrenaline, NA, Dopamine; Synthetic: Isoprenaline, Dobutamine).\n2. Non-catecholamines (Ephedrine, Amphetamine).",
+        "page": 163
+      },
+      {
+        "id": 83,
+        "question": "Describe the Pharmacological Actions of Adrenaline.",
+        "answer": "Eye: Mydriasis.\nCVS: Increase HR, force, O2 consumption, vasodilate coronary.\nResp: Bronchodilation.\nMetabolism: Glycogenolysis, Lipolysis.",
+        "page": 166
+      },
+      {
+        "id": 84,
+        "question": "Enumerate the Therapeutic Uses of Adrenaline.",
+        "answer": "Local: With local anesthetics, Hemostatic, Decongestant.\nSystemic: Anaphylactic shock, Cardiac resuscitation, Bronchial asthma.",
+        "page": 170
+      },
+      {
+        "id": 85,
+        "question": "Compare Adrenaline and Noradrenaline.",
+        "answer": "Adrenaline: Alpha and Beta agonist. Used for anaphylaxis/cardiac arrest.\nNoradrenaline: Alpha and weak Beta1 agonist. Strong vasoconstrictor. Used for shock.",
+        "page": 173
+      },
+      {
+        "id": 86,
+        "question": "Describe the dose-dependent effects of Dopamine.",
+        "answer": "Low dose: D1 receptors (Renal vasodilation).\nModerate dose: Beta1 (Inotropic).\nHigh dose: Alpha (Vasoconstriction).",
+        "page": 176
+      },
+      {
+        "id": 87,
+        "question": "List other Sympathomimetics and their uses.",
+        "answer": "Phenylephrine (Vasopressor), Clonidine (Anti-HT), Salbutamol (Bronchodilator), Ritodrine (Uterine relaxant).",
+        "page": 180
+      },
+      {
+        "id": 88,
+        "question": "Classify Sympathetic Depressants (Sympatholytics).",
+        "answer": "1. Alpha blockers (Phentolamine, Prazosin).\n2. Beta blockers (Propranolol, Atenolol).\n3. Mixed blockers (Labetalol).\n4. Central alpha2 agonists (Clonidine).",
+        "page": 182
+      }
+    ]
+  },
+  {
+    "lecture": "Lecture 8: Sympatholytics",
+    "questions": [
+      {
+        "id": 89,
+        "question": "List the Therapeutic Uses of Alpha Blockers.",
+        "answer": "Hypertension (Selective), Peripheral vascular disease, Reverse VC from NA leakage, Benign Prostatic Hyperplasia (BPH).",
+        "page": 184
+      },
+      {
+        "id": 90,
+        "question": "Classify Beta Blockers.",
+        "answer": "Non-selective (Propranolol), Selective B1 (Metoprolol, Atenolol), Mixed B & a1 (Carvedilol).",
+        "page": 185
+      },
+      {
+        "id": 91,
+        "question": "Enumerate the Uses of Beta Blockers.",
+        "answer": "CNS: Anxiety, Tremors, Migraine.\nEye: Glaucoma (Timolol).\nCVS: Angina, MI, Arrhythmia, Hypertension.",
+        "page": 186
+      },
+      {
+        "id": 92,
+        "question": "List Side Effects and Contraindications of Beta Blockers.",
+        "answer": "Side effects: Heart failure/block, Cold extremities (Raynaud's), Bronchospasm, Hypoglycemia masking.\nContraindications: Severe bradycardia, Heart block, Asthma.",
+        "page": 189
+      }
+    ]
+  },
+  {
+    "lecture": "Lecture 9: NSAIDs - Aspirin",
+    "questions": [
+      {
+        "id": 93,
+        "question": "What is the mechanism of action of Aspirin?",
+        "answer": "Irreversible inhibition (acetylation) of COX-1 and COX-2 enzymes, inhibiting prostaglandin synthesis.",
+        "page": 193
+      },
+      {
+        "id": 94,
+        "question": "List the Pharmacological Actions of Aspirin.",
+        "answer": "Analgesic, Anti-inflammatory, Antipyretic, Antiplatelet, Respiratory stimulation (high dose), GIT mucosal damage, Uric acid effects.",
+        "page": 194
+      },
+      {
+        "id": 95,
+        "question": "Enumerate Therapeutic Uses of Aspirin.",
+        "answer": "Fever, Headache, Myalgia, Neuralgia, Dysmenorrhea, Osteoarthritis, Rheumatic fever, Rheumatoid disease, Antithrombotic.",
+        "page": 199
+      },
+      {
+        "id": 96,
+        "question": "List Side Effects and Toxicity of Aspirin.",
+        "answer": "Allergic reactions, Reye Syndrome (children), Salicylism (Tinnitus), Gastric ulcers, Bleeding, Renal effects.",
+        "page": 201
+      },
+      {
+        "id": 97,
+        "question": "What is the treatment for Salicylate Poisoning?",
+        "answer": "Symptomatic, Gastric lavage, Alkalinization of urine, Vitamin K.",
+        "page": 203
+      },
+      {
+        "id": 98,
+        "question": "List Contraindications of Aspirin.",
+        "answer": "Peptic ulcer, Asthma, Gout, Bleeding tendencies, Children (viral infections), Pregnancy (3rd trimester).",
+        "page": 205
+      }
+    ]
+  },
+  {
+    "lecture": "Lecture 10: Other NSAIDs & Opioids",
+    "questions": [
+      {
+        "id": 99,
+        "question": "Compare COX-1 and COX-2 Inhibitors.",
+        "answer": "COX-1: Constitutive (Gastric protection), inhibition causes ulcers.\nCOX-2: Inducible (Inflammation), inhibition gives therapeutic effect with less gastric risk but cardiovascular risk.",
+        "page": 212
+      },
+      {
+        "id": 100,
+        "question": "What are the features of Acetaminophen (Paracetamol)?",
+        "answer": "Analgesic and Antipyretic but NOT anti-inflammatory. No gastric/platelet/uric acid side effects. Safe in children/asthma.",
+        "page": 215
+      },
+      {
+        "id": 101,
+        "question": "How is Paracetamol Toxicity treated?",
+        "answer": "N-acetylcysteine (Antidote).",
+        "page": 216
+      },
+      {
+        "id": 102,
+        "question": "Classify Opioid Agonists.",
+        "answer": "Natural (Morphine, Codeine), Semisynthetic (Heroin), Synthetic (Meperidine, Fentanyl, Methadone).",
+        "page": 217
+      },
+      {
+        "id": 103,
+        "question": "Describe the Pharmacodynamics of Morphine (CNS effects).",
+        "answer": "Stimulation: Euphoria, Miosis, Bradycardia, Vomiting.\nDepression: Analgesia, Narcosis, Respiratory depression, Cough suppression.",
+        "page": 222
+      },
+      {
+        "id": 104,
+        "question": "Enumerate Therapeutic Uses of Morphine.",
+        "answer": "Severe visceral pain (Cardiac, Cancer, Colic with atropine), Pulmonary edema, Preanesthetic.",
+        "page": 227
+      },
+      {
+        "id": 105,
+        "question": "List Contraindications of Morphine.",
+        "answer": "Head injury, Asthma/COPD, Acute abdominal pain, Biliary colic (without atropine), Pregnancy/Labor.",
+        "page": 230
+      },
+      {
+        "id": 106,
+        "question": "Describe Acute Morphine Poisoning and its treatment.",
+        "answer": "Triad: Pinpoint pupil, Respiratory depression, Coma.\nTreatment: Artificial respiration, Naloxone (Antagonist).",
+        "page": 232
+      }
+    ]
+  },
+  {
+    "lecture": "Lecture 11: Opioids Continued",
+    "questions": [
+      {
+        "id": 107,
+        "question": "What are the symptoms of Morphine Addiction?",
+        "answer": "Pinpoint pupil, Constipation, Psychosis, Moral deterioration.",
+        "page": 235
+      },
+      {
+        "id": 108,
+        "question": "How is Morphine Addiction managed?",
+        "answer": "Hospitalization, Gradual withdrawal, Substitution with Methadone, Clonidine.",
+        "page": 237
+      },
+      {
+        "id": 109,
+        "question": "List other Opioids and their specific uses.",
+        "answer": "Codeine (Cough), Fentanyl (Patches), Methadone (Addiction), Loperamide (Diarrhea), Tramadol.",
+        "page": 238
+      }
+    ]
+  }
+],
+                allDrugs: [],
+                openAnswers: {},
+                pdfModal: {
+                    isOpen: false,
+                    url: ''
+                },
+
+                getCategoryStyle(text) {
+                    const lower = text.toLowerCase();
+                    if (lower.includes('inducer') || lower.includes('increase') || lower.includes('stimulate') || lower.includes('agonist') && !lower.includes('antagonist')) {
+                        return {
+                            icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>',
+                            color: 'text-green-700',
+                            bg: 'bg-green-50',
+                            border: 'border-green-200',
+                            badge: 'bg-green-100 text-green-800'
+                        };
+                    }
+                    if (lower.includes('inhibitor') || lower.includes('decrease') || lower.includes('block') || lower.includes('antagonist') || lower.includes('reduce')) {
+                        return {
+                            icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path></svg>',
+                            color: 'text-red-700',
+                            bg: 'bg-red-50',
+                            border: 'border-red-200',
+                            badge: 'bg-red-100 text-red-800'
+                        };
+                    }
+                    return {
+                        icon: '',
+                        color: 'text-teal-900',
+                        bg: 'bg-teal-50',
+                        border: 'border-teal-100',
+                        badge: 'bg-teal-100 text-teal-800'
+                    };
+                },
+
+                initApp() {
+                    // Flatten drugs data first
+                    const flatDrugs = this.drugsData.flatMap(lecture => 
+                        lecture.drugs.map(drug => ({
+                            ...drug,
+                            lecture: lecture.lecture
+                        }))
+                    );
+
+                    const groupedDrugs = [];
+                    let currentGroup = null;
+                    let globalIndex = 1;
+
+                    for (const drug of flatDrugs) {
+                        if (!currentGroup) {
+                            currentGroup = {
+                                id: globalIndex++,
+                                names: [{ name: drug.name, note: '' }],
+                                description: drug.description,
+                                page: drug.page,
+                                lecture: drug.lecture
+                            };
+                            continue;
+                        }
+
+                        // 1. Check strict constraints (Page & Lecture)
+                        if (drug.page !== currentGroup.page || drug.lecture !== currentGroup.lecture) {
+                            groupedDrugs.push(currentGroup);
+                            currentGroup = {
+                                id: globalIndex++,
+                                names: [{ name: drug.name, note: '' }],
+                                description: drug.description,
+                                page: drug.page,
+                                lecture: drug.lecture
+                            };
+                            continue;
+                        }
+
+                        // 2. Smart Grouping Logic
+                        // Normalize strings (remove trailing punctuation for comparison)
+                        const cleanDesc = drug.description.replace(/[.;]+$/, '');
+                        const cleanGroupDesc = currentGroup.description.replace(/[.;]+$/, '');
+                        
+                        // Check for "Category Splitters" (; or :)
+                        // This allows "Category; Note A" and "Category; Note B" to group under "Category"
+                        const splitRegex = /[:;]\s*/;
+                        const drugParts = drug.description.split(splitRegex);
+                        const groupParts = currentGroup.description.split(splitRegex);
+                        
+                        let matchFound = false;
+                        let newGroupDesc = currentGroup.description;
+                        let newDrugNote = '';
+                        let updateExistingNotes = false;
+                        let existingNotePrefix = '';
+
+                        // Case A: Exact Match (or close enough)
+                        if (cleanDesc === cleanGroupDesc) {
+                            matchFound = true;
+                            newDrugNote = ''; // No specific note needed
+                        }
+                        // Case B: One is a prefix of the other (e.g. "Inducer" vs "Inducer; also sweat")
+                        // Use clean strings to avoid punctuation mismatches (e.g. "Desc." vs "Desc (Note)")
+                        else if (cleanDesc.startsWith(cleanGroupDesc)) {
+                            matchFound = true;
+                            // The new drug has extra info
+                            // Use original strings to extract the note to preserve formatting
+                            newDrugNote = drug.description.substring(currentGroup.description.length).replace(/^[:;.\s]+/, '');
+                            // If the substring failed because of punctuation diffs, try a smarter diff
+                            if (newDrugNote === '' && drug.description !== currentGroup.description) {
+                                 newDrugNote = drug.description.replace(cleanGroupDesc, '').replace(/^[:;.\s]+/, '');
+                            }
+                        }
+                        else if (cleanGroupDesc.startsWith(cleanDesc)) {
+                            matchFound = true;
+                            // The GROUP has extra info that needs to be moved to the notes of existing items
+                            newGroupDesc = drug.description; // Use the shorter one (from the new drug)
+                            updateExistingNotes = true;
+                            existingNotePrefix = currentGroup.description.substring(drug.description.length).replace(/^[:;.\s]+/, '');
+                             if (existingNotePrefix === '' && currentGroup.description !== drug.description) {
+                                 existingNotePrefix = currentGroup.description.replace(cleanDesc, '').replace(/^[:;.\s]+/, '');
+                            }
+                            newDrugNote = '';
+                        }
+                        // Case C: They share a common "Category" prefix defined by ; or :
+                        else if (drugParts.length > 1 && groupParts.length > 1 && drugParts[0] === groupParts[0]) {
+                            matchFound = true;
+                            newGroupDesc = drugParts[0]; // The common category
+                            // If the group was already just the category, existing items have their notes.
+                            // If the group was "Category; Note A", and we are changing it to "Category", we need to preserve "Note A".
+                            
+                            if (currentGroup.description !== newGroupDesc) {
+                                updateExistingNotes = true;
+                                // Extract what's being removed from the group title
+                                existingNotePrefix = currentGroup.description.substring(newGroupDesc.length).replace(/^[:;.\s]+/, '');
+                            }
+                            
+                            newDrugNote = drug.description.substring(newGroupDesc.length).replace(/^[:;.\s]+/, '');
+                        }
+
+                        if (matchFound) {
+                            // Apply updates
+                            currentGroup.description = newGroupDesc;
+                            
+                            if (updateExistingNotes && existingNotePrefix) {
+                                currentGroup.names.forEach(item => {
+                                    item.note = (existingNotePrefix + ' ' + item.note).trim();
+                                });
+                            }
+
+                            currentGroup.names.push({
+                                name: drug.name,
+                                note: newDrugNote
+                            });
+                        } else {
+                            // No match, start new group
+                            groupedDrugs.push(currentGroup);
+                            currentGroup = {
+                                id: globalIndex++,
+                                names: [{ name: drug.name, note: '' }],
+                                description: drug.description,
+                                page: drug.page,
+                                lecture: drug.lecture
+                            };
+                        }
+                    }
+                    if (currentGroup) groupedDrugs.push(currentGroup);
+
+                    this.allDrugs = groupedDrugs;
+                },
+
+                get filteredDrugs() {
+                    if (this.searchQuery === '') {
+                        return this.allDrugs;
+                    }
+                    const lowerQuery = this.searchQuery.toLowerCase();
+                    return this.allDrugs.filter(drug => 
+                        drug.names.some(n => n.name.toLowerCase().includes(lowerQuery)) || 
+                        drug.description.toLowerCase().includes(lowerQuery)
+                    );
+                },
+
+                toggleAnswer(id) {
+                    // Toggle the boolean value for the specific question ID
+                    this.openAnswers[id] = !this.openAnswers[id];
+                },
+
+                isAnswerVisible(id) {
+                    return !!this.openAnswers[id];
+                },
+
+                openPdf(page) {
+                    // Use #page=N to open at specific page. 
+                    // #toolbar=0&navpanes=0 attempts to hide UI, but browser support varies.
+                    this.pdfModal.url = `Pharmacology_Final.pdf#page=${page}&toolbar=0&navpanes=0&scrollbar=0`;
+                    this.pdfModal.isOpen = true;
+                    document.body.style.overflow = 'hidden'; // Prevent background scrolling
+                },
+
+                closePdf() {
+                    this.pdfModal.isOpen = false;
+                    this.pdfModal.url = ''; // Clear URL to stop video/audio if any
+                    document.body.style.overflow = ''; // Restore scrolling
+                }
+            }
+        }
+    </script>
+</body>
+</html>
