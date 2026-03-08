@@ -35,6 +35,9 @@ export default function InternalCase() {
   };
 
   const handleSave = () => {
+    exportInternalPDF(internal, {
+      adlRows, iadlRows, memoryRows, behavioralRows, familyHistoryRows, arteryRows,
+    });
     const editingId = sessionStorage.getItem('editing-case-id');
     const patientName = (internal.int_name as string) || '';
     const caseData: SavedCase = {

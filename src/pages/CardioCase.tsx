@@ -26,6 +26,7 @@ export default function CardioCase() {
   const handleExport = () => exportCardioPDF(cardio);
 
   const handleSave = () => {
+    exportCardioPDF(cardio);
     const editingId = sessionStorage.getItem('editing-case-id');
     const patientName = (cardio.patient_name as string) || '';
     const caseData: SavedCase = {

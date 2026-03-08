@@ -49,6 +49,9 @@ export default function BothCase() {
   };
 
   const handleSave = () => {
+    generateCombinedPDF(cardio, internal, {
+      adlRows, iadlRows, memoryRows, behavioralRows, familyHistoryRows, arteryRows,
+    });
     const editingId = sessionStorage.getItem('editing-case-id');
     const patientName = (cardio.patient_name as string) || (internal.int_name as string) || '';
     const caseData: SavedCase = {

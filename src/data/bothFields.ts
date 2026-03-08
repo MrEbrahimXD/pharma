@@ -119,6 +119,8 @@ export const mergedSections: MergedSection[] = [
     titleEn: 'Past History (Medical / Surgical)',
     fields: [
       cf('previous_illnesses'),
+      intf('int_past_history_2'),
+      intf('int_past_history_3'),
     ],
   },
 

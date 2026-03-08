@@ -73,6 +73,7 @@ function addField(doc: jsPDF, y: number, label: string, value: string): number {
   y = checkPage(doc, y, 22);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
+  doc.setTextColor(0, 0, 0);
   const labelStr = label + ':';
   doc.text(labelStr, MARGIN, y);
   const labelW = doc.getTextWidth(labelStr) + 8; // 8pt gap between label and value
@@ -80,15 +81,18 @@ function addField(doc: jsPDF, y: number, label: string, value: string): number {
   doc.setFontSize(9);
   const valueText = value || '_______________';
   setValueFont(doc, valueText);
+  doc.setTextColor(200, 30, 30); // red for answers
   const maxWidth = CONTENT_W - labelW - 5;
   const lines = doc.splitTextToSize(valueText, maxWidth);
   if (lines.length <= 1) {
     doc.text(valueText, MARGIN + labelW, y);
     doc.setFont('helvetica', 'normal'); // reset
+    doc.setTextColor(0, 0, 0);
     return y + 18;
   } else {
     doc.text(lines, MARGIN + 5, y + 14);
     doc.setFont('helvetica', 'normal'); // reset
+    doc.setTextColor(0, 0, 0);
     return y + 14 + lines.length * 12 + 4;
   }
 }
@@ -97,11 +101,14 @@ function addCheckboxField(doc: jsPDF, y: number, label: string, values: string[]
   y = checkPage(doc, y, 22);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
+  doc.setTextColor(0, 0, 0);
   doc.text(label + ':', MARGIN, y);
   const text = values && values.length > 0 ? values.join(', ') : 'None';
   setValueFont(doc, text);
+  doc.setTextColor(200, 30, 30); // red for answers
   const lines = doc.splitTextToSize(text, CONTENT_W - 10);
   doc.text(lines, MARGIN + 5, y + 14);
+  doc.setTextColor(0, 0, 0);
   return y + 12 + lines.length * 11 + 4;
 }
 
@@ -132,8 +139,11 @@ function addVASField(doc: jsPDF, y: number, label: string, value: number): numbe
   // Labels
   doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
+  doc.setTextColor(0, 0, 0);
   doc.text('No pain', scaleX, scaleY + 14);
+  doc.setTextColor(200, 30, 30); // red for answer
   doc.text(`${value}/10`, scaleX + scaleW / 2, scaleY + 14, { align: 'center' });
+  doc.setTextColor(0, 0, 0);
   doc.text('Severe pain', scaleX + scaleW, scaleY + 14, { align: 'right' });
 
   return scaleY + 22;
@@ -238,6 +248,7 @@ function renderAssessmentTablePDF(
     styles: { fontSize: 8, cellPadding: 3 },
     headStyles: { fillColor: [30, 64, 175], textColor: 255 },
     alternateRowStyles: { fillColor: [245, 247, 250] },
+    columnStyles: { 1: { textColor: [200, 30, 30] } },
   });
   return doc.lastAutoTable.finalY + 10;
 }
@@ -257,6 +268,7 @@ function renderCheckTablePDF(
     styles: { fontSize: 8, cellPadding: 3 },
     headStyles: { fillColor: [30, 64, 175], textColor: 255 },
     alternateRowStyles: { fillColor: [245, 247, 250] },
+    columnStyles: { 1: { textColor: [200, 30, 30] }, 2: { textColor: [200, 30, 30] } },
   });
   return doc.lastAutoTable.finalY + 10;
 }
@@ -275,6 +287,7 @@ function renderFamilyTablePDF(
     styles: { fontSize: 8, cellPadding: 3 },
     headStyles: { fillColor: [30, 64, 175], textColor: 255 },
     alternateRowStyles: { fillColor: [245, 247, 250] },
+    columnStyles: { 1: { textColor: [200, 30, 30] }, 2: { textColor: [200, 30, 30] } },
   });
   return doc.lastAutoTable.finalY + 10;
 }
@@ -297,7 +310,7 @@ function renderArteryTablePDF(
     ]),
     styles: { fontSize: 8, cellPadding: 3, halign: 'center' },
     headStyles: { fillColor: [30, 64, 175], textColor: 255 },
-    columnStyles: { 0: { halign: 'left' } },
+    columnStyles: { 0: { halign: 'left' }, 1: { textColor: [200, 30, 30] }, 2: { textColor: [200, 30, 30] } },
     alternateRowStyles: { fillColor: [245, 247, 250] },
   });
   return doc.lastAutoTable.finalY + 10;
